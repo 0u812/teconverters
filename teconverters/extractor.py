@@ -1,7 +1,19 @@
 from __future__ import print_function
+import teomex
 import re
 
-def partitionOMEXInputString(instr):
+def saveInlineOMEX(omex_str, out_path):
+    '''Saves an inline omex string to a file. Invokes partitionInlineOMEXString.
+
+    :param omex_str: The inline omex string
+    :type  omex_str: str
+    :param out_path: Path to the output file
+    :type  out_path: str
+    '''
+    omex = teomex.inlineOmex.fromString(omex_str)
+    omex.exportToCombine(out_path)
+
+def partitionInlineOMEXString(instr):
     '''Given mixed Antimony/PhraSEDML, separates out the constituent parts.
     Assumes that Antimony and PhraSEDML are not mixed on the same line.
 
