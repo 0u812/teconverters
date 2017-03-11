@@ -1,4 +1,7 @@
 from __future__ import print_function
+
+import os, re
+
 import phrasedml
 
 class phrasedmlImporter:
@@ -12,9 +15,24 @@ class phrasedmlImporter:
         self.sedml_str = None
         self.sedml_path = None
 
+    def isInRootDir(self, file):
+        return os.path.split(file)[0] == ''
+
+    def removeFileExt(self, filename):
+        return os.path.splitext(filename)[0]
+
     def fixModelRefs(self, phrasedml_str):
         ''' Changes all references of type myModel.xml to myModel.'''
-        return phrasedml_str
+        model_ref = re.compile(r'^.*\s*model\s*"([^"]*)"\s*$')
+        out_str = ''
+        for line in phrasedml_str.splitlines():
+            match = model_ref.match(line)
+            if match:
+                filename = match.group(1)
+                if self.isInRootDir(filename):
+                    line = line.replace(filename,self.removeFileExt(filename))
+            out_str += line+'\n'
+        return out_str
 
     def toPhrasedml(self):
         if self.sedml_str:
