@@ -44,7 +44,7 @@ class omexImporter:
                     if n_master_sedml > 1:
                         raise RuntimeError('Multiple "master" SED-ML files')
                             # 'Please file a bug at https://github.com/sys-bio/tellurium/issues and include the file you are trying to import.')
-                    phrasedml_header = '// Converted from {}'.format(os.path.basename(entry.getLocation()))
-                    phrasedml = phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml()
+                    phrasedml_header = '// Converted from {}\n'.format(os.path.basename(entry.getLocation()))
+                    phrasedml = phrasedml_header + phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml()
 
         return phrasedml
