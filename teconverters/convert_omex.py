@@ -29,7 +29,7 @@ class omexImporter:
         :param omex: A CombineArchive instance
         """
         self.omex = omex
-        self.write_block_delimiter_comments = __write_block_delimiter_comments
+        self.write_block_delimiter_comments = omexImporter.__write_block_delimiter_comments
 
         self.n_master_sedml = 0
         self.sedml_entries = []
@@ -138,4 +138,4 @@ class omexImporter:
                 phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml().rstrip() + '\n'
                 + self.makeFooter(entry, 'sedml'))
 
-        return output
+        return output.rstrip()
