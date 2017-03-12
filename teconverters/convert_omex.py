@@ -4,6 +4,7 @@ import os, re
 
 from tecombine import CombineArchive
 from .convert_phrasedml import phrasedmlImporter
+from .convert_antimony import antimonyConverter
 
 class omexImporter:
     @classmethod
@@ -64,20 +65,70 @@ class omexImporter:
         """ Returns true if path specififies a root location like ./file.ext."""
         return os.path.split(path)[0] == ''
 
+    def makeHeader(self, entry, type):
+        """ Makes a header for an entry.
+
+        :param entry: Entry in Combine archive (class CaContent)
+        :param type: Can be 'sbml' or 'sedml'
+        """
+        header_map = {
+            'sbml':  '%antimony',
+            'sedml': '%phrasedml',
+        }
+        name_map = {
+            'sbml':  'Antimony',
+            'sedml': 'PhraSEDML',
+        }
+        try:
+            header_start = header_map[type]
+            block_source_name = name_map[type]
+        except KeyError:
+            raise KeyError('Filetype {} not understood by makeHeader', type)
+        if self.headerless:
+            # the "header" is just a comment
+            header = '// -- Begin {} block converted from {}\n'.format(block_source_name, os.path.basename(entry.getLocation()))
+        else:
+            header = '{} {}'.format(header_start, entry.getLocation())
+            if entry.isSetMaster() and entry.getMaster():
+                header += ' --master=True'
+        return header
+
+    def makeFooter(self, entry, type):
+        """ Makes a header for an entry.
+
+        :param entry: Entry in Combine archive (class CaContent)
+        :param type: Can be 'sbml' or 'sedml'
+        """
+        name_map = {
+            'sbml':  'Antimony',
+            'sedml': 'PhraSEDML',
+        }
+        try:
+            block_source_name = name_map[type]
+        except KeyError:
+            raise KeyError('Filetype {} not understood by makeFooter', type)
+        if self.headerless:
+            footer = '// -- End {} block\n\n'.format(block_source_name)
+        else:
+            footer = '\n'
+        return footer
+
     def toInlineOmex(self):
         """ Converts a COMBINE archive into an inline phrasedml / antimony string.
 
         :returns: A string with the inline phrasedml / antimony source
         """
+        output = ''
+
+        # convert sbml entries to antimony
+        for entry in self.sbml_entries:
+            output += (self.makeHeader(entry, 'sbml') +
+                antimonyConverter().sbmlToAntimony(self.omex.extractEntryToString(entry.getLocation()))[1].rstrip() + '\n'
+                + self.makeFooter(entry, 'sbml'))
         # convert sedml entries to phrasedml
         for entry in self.sedml_entries:
-            if self.headerless:
-                # the "header" is just a comment
-                phrasedml_header = '// Converted from {}\n'.format(os.path.basename(entry.getLocation()))
-            else:
-                phrasedml_header = '%phrasedml {}'.format(entry.getLocation())
-                if entry.isSetMaster() and entry.getMaster():
-                    phrasedml_header += ' --master=True'
-            phrasedml = phrasedml_header + phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml()
+            output += (self.makeHeader(entry, 'sedml') +
+                phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml().rstrip() + '\n'
+                + self.makeFooter(entry, 'sedml'))
 
-        return phrasedml
+        return output
