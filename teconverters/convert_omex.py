@@ -25,26 +25,59 @@ class omexImporter:
         """
         self.omex = omex
 
+        self.n_master_sedml = 0
+        self.sedml_entries = []
+        # match sedml, any level/ver
+        self.sedml_fmt_expr = re.compile(r'^http[s]?://identifiers\.org/combine\.specifications/sed-ml.*$')
+
+        self.sbml_entries = []
+        # match sbml, any level/ver
+        self.sbml_fmt_expr = re.compile(r'^http[s]?://identifiers\.org/combine\.specifications/sbml.*$')
+
+        # Prevents %antimony and %phrasedml headers from
+        # being written when all entries are in root of archive
+        # and no sedml entries have master=False.
+        self.headerless = True
+        for entry in self.getEntries():
+            # shouldn't happen
+            if not entry.isSetLocation():
+                raise RuntimeError('Entry has no location')
+            if not self.isInRootDir(entry.getLocation()):
+                # must write headers to specify entry paths
+                self.headerless = False
+            # count number of master sedml entries
+            if self.sedml_fmt_expr.match(entry.getFormat()) != None:
+                if entry.isSetMaster() and entry.getMaster():
+                    self.n_master_sedml += 1
+                    if self.n_master_sedml > 1:
+                        # must write headers to specify non-master sedml
+                        self.headerless = False
+                    self.sedml_entries.append(entry)
+            elif self.sbml_fmt_expr.match(entry.getFormat()) != None:
+                self.sbml_entries.append(entry)
+
+    def getEntries(self):
+        for k in range (self.omex.getNumEntries()):
+            yield self.omex.getEntry(k)
+
+    def isInRootDir(self, path):
+        """ Returns true if path specififies a root location like ./file.ext."""
+        return os.path.split(path)[0] == ''
+
     def toInlineOmex(self):
         """ Converts a COMBINE archive into an inline phrasedml / antimony string.
 
         :returns: A string with the inline phrasedml / antimony source
         """
-        n_master_sedml = 0
-        # match sedml, any level
-        sedml_fmt_expr = re.compile(r'^http[s]?://identifiers\.org/combine\.specifications/sed-ml.*$')
-        n_sbml = 0
-        # match sbml, any level
-        sbml_fmt_expr = re.compile(r'^http[s]?://identifiers\.org/combine\.specifications/sbml.*$')
-        for k in range (self.omex.getNumEntries()):
-            entry = self.omex.getEntry(k);
-            if sedml_fmt_expr.match(entry.getFormat()) != None:
+        # convert sedml entries to phrasedml
+        for entry in self.sedml_entries:
+            if self.headerless:
+                # the "header" is just a comment
+                phrasedml_header = '// Converted from {}\n'.format(os.path.basename(entry.getLocation()))
+            else:
+                phrasedml_header = '%phrasedml {}'.format(entry.getLocation())
                 if entry.isSetMaster() and entry.getMaster():
-                    n_master_sedml += 1
-                    if n_master_sedml > 1:
-                        raise RuntimeError('Multiple "master" SED-ML files')
-                            # 'Please file a bug at https://github.com/sys-bio/tellurium/issues and include the file you are trying to import.')
-                    phrasedml_header = '// Converted from {}\n'.format(os.path.basename(entry.getLocation()))
-                    phrasedml = phrasedml_header + phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml()
+                    phrasedml_header += ' --master=True'
+            phrasedml = phrasedml_header + phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml()
 
         return phrasedml
