@@ -6,7 +6,11 @@ from tecombine import CombineArchive
 from .convert_phrasedml import phrasedmlImporter
 from .convert_antimony import antimonyConverter
 
+
 class omexImporter:
+    # Set to false to disable "Converted from ...xml" comments
+    __write_block_delimiter_comments = True
+
     @classmethod
     def fromFile(cls, path):
         """ Initialize from a file location.
@@ -25,6 +29,7 @@ class omexImporter:
         :param omex: A CombineArchive instance
         """
         self.omex = omex
+        self.write_block_delimiter_comments = __write_block_delimiter_comments
 
         self.n_master_sedml = 0
         self.sedml_entries = []
@@ -84,13 +89,15 @@ class omexImporter:
             block_source_name = name_map[type]
         except KeyError:
             raise KeyError('Filetype {} not understood by makeHeader', type)
-        if self.headerless:
-            # the "header" is just a comment
-            header = '// -- Begin {} block converted from {}\n'.format(block_source_name, os.path.basename(entry.getLocation()))
-        else:
-            header = '{} {}'.format(header_start, entry.getLocation())
-            if entry.isSetMaster() and entry.getMaster():
-                header += ' --master=True'
+
+        header = ''
+        if not self.headerless:
+            header += '{} {}'.format(header_start, entry.getLocation())
+                if entry.isSetMaster() and entry.getMaster():
+                    header += ' --master=True'
+            header += '\n'
+        if self.write_block_delimiter_comments:
+            header += '// -- Begin {} block converted from {}\n'.format(block_source_name, os.path.basename(entry.getLocation()))
         return header
 
     def makeFooter(self, entry, type):
@@ -107,10 +114,10 @@ class omexImporter:
             block_source_name = name_map[type]
         except KeyError:
             raise KeyError('Filetype {} not understood by makeFooter', type)
-        if self.headerless:
-            footer = '// -- End {} block\n\n'.format(block_source_name)
-        else:
-            footer = '\n'
+
+        footer = ''
+        if self.write_block_delimiter_comments:
+            footer += '// -- End {} block\n\n'.format(block_source_name)
         return footer
 
     def toInlineOmex(self):
