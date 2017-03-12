@@ -93,8 +93,8 @@ class omexImporter:
         header = ''
         if not self.headerless:
             header += '{} {}'.format(header_start, entry.getLocation())
-                if entry.isSetMaster() and entry.getMaster():
-                    header += ' --master=True'
+            if entry.isSetMaster() and entry.getMaster():
+                header += ' --master=True'
             header += '\n'
         if self.write_block_delimiter_comments:
             header += '// -- Begin {} block converted from {}\n'.format(block_source_name, os.path.basename(entry.getLocation()))
