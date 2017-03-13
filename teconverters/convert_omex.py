@@ -134,8 +134,12 @@ class omexImporter:
                 + self.makeFooter(entry, 'sbml'))
         # convert sedml entries to phrasedml
         for entry in self.sedml_entries:
+            try:
+                phrasedml_output = phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml().rstrip()
+            except:
+                raise RuntimeError('Could not read embedded SED-ML file {}.'.format(entry.getLocation()))
             output += (self.makeHeader(entry, 'sedml') +
-                phrasedmlImporter().fromContent(self.omex.extractEntryToString(entry.getLocation())).toPhrasedml().rstrip() + '\n'
+                phrasedml_output + '\n'
                 + self.makeFooter(entry, 'sedml'))
 
         return output.rstrip()

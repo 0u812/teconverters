@@ -3,12 +3,25 @@ from __future__ import print_function
 import os, re
 
 import phrasedml
+from tesedml import SedReader
 
 class phrasedmlImporter:
     @classmethod
     def fromContent(cls, sedml_str):
         importer = phrasedmlImporter()
         importer.sedml_str = sedml_str
+        # test for errors
+        result = phrasedml.convertString(sedml_str)
+        if result is None:
+            # get errors from libsedml
+            doc = SedReader().readSedMLFromString(sedml_str)
+            if doc.getNumErrors():
+                max_len = 100
+                message = doc.getError(doc.getNumErrors()-1).getMessage()
+                message = message[:max_len] + '...' if len(message) > max_len else message
+                raise RuntimeError('Errors reading SED-ML: {}'.format(message))
+            else:
+                raise RuntimeError('Unable to read SED-ML.')
         return importer
 
     def __init__(self):
@@ -36,8 +49,12 @@ class phrasedmlImporter:
 
     def toPhrasedml(self):
         if self.sedml_str:
-            phrasedml.convertString(self.sedml_str)
+            result = phrasedml.convertString(self.sedml_str)
+            if result is None:
+                raise RuntimeError(phrasedml.getLastError())
             return self.fixModelRefs(phrasedml.getLastPhraSEDML())
         elif self.sedml_path:
-            phrasedml.convertFile(self.sedml_str)
+            result = phrasedml.convertFile(self.sedml_str)
+            if result is None:
+                raise RuntimeError(phrasedml.getLastError())
             return self.fixModelRefs(phrasedml.getLastPhraSEDML())
