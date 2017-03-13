@@ -23,7 +23,7 @@ def partitionInlineOMEXString(instr):
     '''
     class S_PML:
         # recognizes Antimony start
-        sb_start = re.compile(r'^\s*\*?model\s+.*(\([^)]*\))?\s*$')
+        sb_start = re.compile(r'^\s*\*?\s*model\s*[^()\s]+\s*(\([^)]*\))?\s*$')
         force_sb_start = re.compile(r'^\s(%crn|%sb)\s*$')
 
         def __init__(self, force=False, initl_content=''):
